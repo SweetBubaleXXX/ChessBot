@@ -2,16 +2,16 @@ import logging
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Command, Text
+from aiogram.dispatcher.filters import Command, CommandStart, Text
 
-from ..db import db
 from ..bot import bot, dp
+from ..db import db
 from ..dialogs import Messages
 
 CANCEL_COMMANDS = ["cancel", "exit", "stop", "отмена", "стоп"]
 
 
-@dp.message_handler(commands="start")
+@dp.message_handler(CommandStart())
 async def start(msg: types.Message):
     user_id = msg.from_user.id
     username = msg.from_user.mention
@@ -29,3 +29,4 @@ async def cancel_handler(msg: types.Message, state: FSMContext):
     if current_state is None:
         return
     await state.finish()
+    await msg.reply(".", reply_markup=types.ReplyKeyboardRemove())

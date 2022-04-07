@@ -6,14 +6,37 @@ from aiogram.dispatcher.filters import Command, Text
 
 from .. import config
 from ..bot import bot, dp
+from ..db.db import get_user_by_username
 from ..dialogs import Messages
-from ..game import (Coordinate, CoordinateError, Game, call_logic_API,
-                    send_field)
-from ..game.field import FIELD
+from ..game import *
+from ..keyboards import colors, modes
 
 
 @dp.message_handler(Command('play', ignore_case=True), state="*")
 async def start_game(msg: types.Message):
+    await msg.answer(Messages.modes, reply_markup=modes.keyboard)
+    await Game.choose_game_mode.set()
+
+
+@dp.message_handler(Text(modes.buttons["friend"]), state=Game.choose_game_mode)
+async def friend_game_mode(msg: types.Message, state: FSMContext):
+    await msg.answer(Messages.colors, reply_markup=colors.keyboard)
+    await Game.choose_color.set()
+
+
+@dp.message_handler(Text(colors.buttons["white"]), state=Game.choose_color)
+async def choose_white(msg: types.Message, state: FSMContext):
+    bot_name = await bot.get_me()
+    await msg.answer(Messages.invite_opponent.format(example=bot_name.mention),
+                     reply_markup=types.ReplyKeyboardRemove())
+    await Game.invite_opponent.set()
+
+
+@dp.message_handler(Text(startswith="@"), state=Game.invite_opponent)
+async def choose_opponent(msg: types.Message, state: FSMContext):
+    user = get_user_by_username(msg.text)
+    logging.info(user)
+    await msg.answer(str(user))
     state = Dispatcher.get_current().current_state()
     await state.reset_data()
     async with state.proxy() as data:
