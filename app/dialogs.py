@@ -7,6 +7,8 @@ class Messages:
     modes: str = "Выберите режим игры:"
     colors: str = "За кого играть?"
     invite_opponent: str = "Отправьте контакт (например {example})"
+    invalid_username: str = "Неправильное имя пользователя"
+    user_not_found: str = "Пользователь с таким именем не найден"
     pick_piece: str = "Выберите фигуру:"
     pick_cell: str = "Выберите куда ходить:"
     picked: str = "<b>{picked}</b> → ..."

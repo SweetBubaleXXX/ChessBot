@@ -1,4 +1,6 @@
 import logging
+import re
+from random import randint
 
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
@@ -26,24 +28,49 @@ async def friend_game_mode(msg: types.Message, state: FSMContext):
 
 @dp.message_handler(Text(colors.buttons["white"]), state=Game.choose_color)
 async def choose_white(msg: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data["white"] = True
+    await invite_opponent_reply(msg)
+
+
+@dp.message_handler(Text(colors.buttons["black"]), state=Game.choose_color)
+async def choose_black(msg: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data["white"] = False
+    await invite_opponent_reply(msg)
+
+
+@dp.message_handler(Text(colors.buttons["random"]), state=Game.choose_color)
+async def choose_random(msg: types.Message, state: FSMContext):
+    is_white = bool(randint(0, 1))
+    async with state.proxy() as data:
+        data["white"] = is_white
+    await msg.reply(colors.buttons["white"] if is_white else colors.buttons["black"])
+    await invite_opponent_reply(msg)
+
+
+async def invite_opponent_reply(msg: types.Message):
     bot_name = await bot.get_me()
     await msg.answer(Messages.invite_opponent.format(example=bot_name.mention),
                      reply_markup=types.ReplyKeyboardRemove())
     await Game.invite_opponent.set()
 
 
-@dp.message_handler(Text(startswith="@"), state=Game.invite_opponent)
+@dp.message_handler(state=Game.invite_opponent)
 async def choose_opponent(msg: types.Message, state: FSMContext):
+    if not re.match("^@[a-zA-Z0-9_]{1,32}$", msg.text):
+        return await msg.reply(Messages.invalid_username)
     user = get_user_by_username(msg.text)
     logging.info(user)
+    if user is None:
+        return await msg.reply(Messages.user_not_found)
     await msg.answer(str(user))
     state = Dispatcher.get_current().current_state()
     await state.reset_data()
     async with state.proxy() as data:
-        field = FIELD
-        data["field"] = field
+        data["field"] = FIELD
         data["white"] = True
-        await send_field(msg, field, data["white"])
+        await send_field(msg, FIELD, data["white"])
     await msg.answer(Messages.pick_piece)
     await Game.pick_piece.set()
 
