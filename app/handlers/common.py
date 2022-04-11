@@ -8,7 +8,7 @@ from ..bot import bot, dp
 from ..db import db
 from ..dialogs import Messages
 
-CANCEL_COMMANDS = ["cancel", "exit", "stop", "отмена", "стоп"]
+CANCEL_COMMANDS = ["cancel", "exit", "close", "fuckyou", "stop", "отмена", "стоп"]
 
 
 @dp.message_handler(CommandStart())
