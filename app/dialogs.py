@@ -13,4 +13,5 @@ class Messages:
     pick_cell: str = "Выберите куда ходить:"
     picked: str = "<b>{picked}</b> → ..."
     moved: str = "<b>{picked}</b> → <u><b>{move}</b></u>"
+    coordinate_error: str = "Неверная координата"
     cancel_choise: str = "🚫 Отметить выбор 🚫"

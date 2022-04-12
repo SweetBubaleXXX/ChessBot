@@ -1,18 +1,21 @@
 import re
+from typing import Union
 
-from aiogram import types
-from aiogram.dispatcher import FSMContext
+from ..dialogs import Messages
 
 
 class Coordinate:
     def __init__(self, coordinate: str) -> None:
-        cut_str = re.sub("[^a-h1-8]", "", coordinate.lower())
-        self.picked = cut_str[:2]
-        y_str, x_str = self.picked
-        self.x = int(x_str) - 1
-        self.y = ord(y_str) - 97
-        if not (0 <= self.x < 8 and 0 <= self.y < 8):
-            raise ValueError
+        try:
+            cut_str = re.sub("[^a-h1-8]", "", coordinate.lower())
+            self.picked = cut_str[:2]
+            y_str, x_str = self.picked
+            self.x = int(x_str) - 1
+            self.y = ord(y_str) - 97
+            if not (0 <= self.x < 8 and 0 <= self.y < 8):
+                raise ValueError
+        except (ValueError, IndexError):
+            raise CoordinateError
 
     def __str__(self) -> str:
         return self.picked
@@ -22,10 +25,8 @@ class Coordinate:
 
 
 class CoordinateError(Exception):
-    def __init__(self, msg_object: types.Message, state: FSMContext = None,
-                 answer: str = None, message: str = "Неверная координата") -> None:
-        self.msg_object = msg_object
-        self.state = state
+    def __init__(self, answer: Union[str, None] = None,
+                 message: str = Messages.coordinate_error) -> None:
         self.answer = answer
         self.message = message
         super().__init__(self.message)

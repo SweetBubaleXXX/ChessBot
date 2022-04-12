@@ -127,8 +127,8 @@ async def pick_piece(msg: types.Message, state: FSMContext):
 
     try:
         picked = Coordinate(msg.text)
-    except (ValueError, IndexError):
-        raise CoordinateError(msg, state, Messages.pick_piece)
+    except CoordinateError:
+        raise CoordinateError(Messages.pick_piece)
 
     cell = data["field"][picked.x][picked.y]
     if ((data["white"] and 64 < ord(cell) < 90) or
@@ -136,7 +136,7 @@ async def pick_piece(msg: types.Message, state: FSMContext):
         data["picked"] = str(picked)
         await state.update_data(picked=data["picked"])
     else:
-        raise CoordinateError(msg, state, Messages.pick_piece)
+        raise CoordinateError(Messages.pick_piece)
 
     # logging.info(await call_logic_API(data["picked"], data["field"]))
 
@@ -162,8 +162,8 @@ async def move_piece(msg: types.Message, state: FSMContext):
     try:
         move = Coordinate(msg.text)
         picked = Coordinate(data.get("picked"))
-    except (ValueError, IndexError):
-        raise CoordinateError(msg, state, Messages.pick_cell)
+    except CoordinateError:
+        raise CoordinateError(Messages.pick_cell)
 
     field = data.get("field")
     field[move.x][move.y] = field[picked.x][picked.y]
@@ -188,6 +188,7 @@ async def cancel_picked(call: types.CallbackQuery, state: FSMContext):
 
 @ dp.errors_handler(exception=CoordinateError)
 async def coordinate_error_handler(update: types.Update, exception: CoordinateError):
-    await exception.msg_object.reply(exception.message)
-    await exception.msg_object.answer(exception.answer)
+    await update.message.reply(exception.message)
+    if exception.answer:
+        await update.message.answer(exception.answer)
     return True
