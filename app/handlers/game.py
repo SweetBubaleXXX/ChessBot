@@ -11,7 +11,7 @@ from ..bot import bot, dp
 from ..db.db import get_user_by_username
 from ..dialogs import Messages
 from ..game import *
-from ..keyboards import colors, modes, invitation
+from ..keyboards import colors, invitation, modes
 
 
 @dp.message_handler(Command('play', ignore_case=True), state="*")
@@ -74,16 +74,15 @@ async def choose_opponent(msg: types.Message, state: FSMContext):
             return await msg.reply(Messages.user_busy)
         opponent_data["field"] = FIELD
         opponent_data["opponent"] = msg.from_user.id
-        opponent_data["white"] = not(user_data.get("white"))
-    await opponent_state.set_state(Game.invitation)
-    user_data.update(opponent=opponent_id, field=FIELD)
+        opponent_data["white"] = not(user_data["white"])
+        await opponent_state.set_state(Game.invitation)
+    await state.update_data(opponent=opponent_id, field=FIELD)
     await bot.send_message(opponent_id,
                            Messages.invitation.format(
                                name=msg.from_user.full_name),
                            reply_markup=invitation.keyboard)
+    await msg.answer(Messages.pending_join)
     await Game.pending_join.set()
-
-    await msg.answer(str(user))
 
 
 @dp.message_handler(state=Game.pending_join)
@@ -101,28 +100,35 @@ async def accept_invitation(msg: types.Message, state: FSMContext):
         if data.get("white"):
             await bot.send_message(data["opponent"], Messages.pending_move,
                                    reply_markup=types.ReplyKeyboardRemove())
-            opponent_state.set_state(Game.opponents_move)
-            await msg.answer(Messages.pick_piece)
+            await opponent_state.set_state(Game.opponents_move)
+            await msg.answer(Messages.pick_piece,
+                             reply_markup=types.ReplyKeyboardRemove())
             await Game.pick_piece.set()
         else:
             await bot.send_message(data["opponent"], Messages.pick_piece,
                                    reply_markup=types.ReplyKeyboardRemove())
-            opponent_state.set_state(Game.pick_piece)
-            await msg.answer(Messages.pending_move)
+            await opponent_state.set_state(Game.pick_piece)
+            await msg.answer(Messages.pending_move,
+                             reply_markup=types.ReplyKeyboardRemove())
             await Game.opponents_move.set()
 
 
 @dp.message_handler(Text(invitation.buttons["decline"]), state=Game.invitation)
 async def decline_invitation(msg: types.Message, state: FSMContext):
+    user_data = await state.get_data()
+    opponent_state = dp.current_state(chat=user_data["opponent"],
+                                      user=user_data["opponent"])
+    await opponent_state.finish()
     await state.finish()
-    await msg.reply(".", reply_markup=types.ReplyKeyboardRemove())
+    await msg.reply(Messages.on_exit, reply_markup=types.ReplyKeyboardRemove())
+    await bot.send_message(user_data["opponent"], Messages.invitation_canceled)
 
 
 @dp.message_handler(state=Game.pick_piece)
 async def pick_piece(msg: types.Message, state: FSMContext):
-    data = await state.get_data()
+    user_data = await state.get_data()
 
-    if data.get("picked"):
+    if user_data.get("picked"):
         return
 
     try:
@@ -130,11 +136,11 @@ async def pick_piece(msg: types.Message, state: FSMContext):
     except CoordinateError:
         raise CoordinateError(Messages.pick_piece)
 
-    cell = data["field"][picked.x][picked.y]
-    if ((data["white"] and 64 < ord(cell) < 90) or
-            (not data["white"] and 96 < ord(cell) < 123)):
-        data["picked"] = str(picked)
-        await state.update_data(picked=data["picked"])
+    cell = user_data["field"][picked.x][picked.y]
+    if ((user_data["white"] and 64 < ord(cell) < 90) or
+            (not user_data["white"] and 96 < ord(cell) < 123)):
+        user_data["picked"] = str(picked)
+        await state.update_data(picked=user_data["picked"])
     else:
         raise CoordinateError(Messages.pick_piece)
 
@@ -144,7 +150,7 @@ async def pick_piece(msg: types.Message, state: FSMContext):
     keyboard.add(types.InlineKeyboardButton(
         text=Messages.cancel_choise, callback_data="cancel_picked"))
 
-    await send_field(msg.from_user.id, data["field"], data["white"],
+    await send_field(msg.from_user.id, user_data["field"], user_data["white"],
                      picked=[(picked.x, picked.y)])
     await msg.answer(Messages.picked.format(picked=str(picked)),
                      reply_markup=keyboard)
@@ -154,28 +160,36 @@ async def pick_piece(msg: types.Message, state: FSMContext):
 
 @ dp.message_handler(state=Game.move_piece)
 async def move_piece(msg: types.Message, state: FSMContext):
-    data = await state.get_data()
+    user_data = await state.get_data()
 
-    if not data.get("picked"):
+    if not user_data.get("picked"):
         return
 
     try:
         move = Coordinate(msg.text)
-        picked = Coordinate(data.get("picked"))
+        picked = Coordinate(user_data.get("picked"))
     except CoordinateError:
         raise CoordinateError(Messages.pick_cell)
 
-    field = data.get("field")
+    field = user_data.get("field")
     field[move.x][move.y] = field[picked.x][picked.y]
     field[picked.x][picked.y] = "-"
-    data["white"] = not data["white"]
-    data["picked"] = False
-    await state.update_data(**data)
+    user_data["picked"] = False
+    await state.update_data(**user_data)
 
-    await send_field(msg.from_user.id, field, data["white"])
+    await send_field(msg.from_user.id, field, user_data["white"])
     await msg.answer(Messages.moved.format(picked=str(picked), move=str(move)))
-    await msg.answer(Messages.pick_piece)
-    await Game.pick_piece.set()
+    await msg.answer(Messages.pending_move)
+    await Game.opponents_move.set()
+
+    opponent_state = dp.current_state(chat=user_data["opponent"],
+                                      user=user_data["opponent"])
+    await opponent_state.update_data(field=field)
+    await send_field(user_data["opponent"], field, not(user_data["white"]))
+    await bot.send_message(user_data["opponent"],
+                           Messages.moved.format(picked=str(picked), move=str(move)))
+    await bot.send_message(user_data["opponent"], Messages.pick_piece)
+    await opponent_state.set_state(Game.pick_piece)
 
 
 @ dp.callback_query_handler(text="cancel_picked", state=Game.move_piece)
