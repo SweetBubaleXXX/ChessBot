@@ -161,4 +161,4 @@ cython_debug/
 
 .vscode
 *.sqlite
-config.py
+bot_config.py

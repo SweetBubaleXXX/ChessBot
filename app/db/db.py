@@ -2,7 +2,7 @@ import sqlite3
 from os import path
 from typing import Union
 
-from ..config import DB_NAME
+from ..bot_config import DB_NAME
 
 PATH = path.dirname(__file__)
 SCHEMAS = {

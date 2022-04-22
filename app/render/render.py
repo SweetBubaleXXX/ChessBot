@@ -4,55 +4,27 @@ from typing import Optional
 
 from PIL import Image
 
+from . import config
+
 PATH = path.dirname(__file__)
-SIZES = [1100]
-BOARD_SIZES = {
-    "1100": (128, 38)  # Cell size, border size
-}
-BOARDS = {
-    "board": "board.png",
-    "board_black": "board-reverse.png",
-}
-CELLS = {
-    "pieces": {
-        "R": "wr.png",
-        "H": "wh.png",
-        "B": "wb.png",
-        "Q": "wq.png",
-        "K": "wk.png",
-        "P": "wp.png",
-        "r": "br.png",
-        "h": "bh.png",
-        "b": "bb.png",
-        "q": "bq.png",
-        "k": "bk.png",
-        "p": "bp.png"
-    },
-    "cells": {
-        "picked": "green.png",
-        "move": "dot.png",
-        "beat": "yellow.png",
-        "check": "red.png"
-    }
-}
 
 
 class Render:
     def __init__(self, size: Optional[int] = None) -> None:
-        if size in SIZES:
+        if size in config.SIZES:
             self.size = size
         else:
-            self.size = SIZES[0]
-        self.board_sizes = BOARD_SIZES[str(self.size)]
+            self.size = config.SIZES[0]
+        self.board_sizes = config.BOARD_SIZES[str(self.size)]
         self.board = Image.open(path.join(PATH, "src", str(
-            self.size), BOARDS["board"])).convert("RGBA")
+            self.size), config.BOARDS["board"])).convert("RGBA")
         self.board_black = Image.open(path.join(PATH, "src", str(
-            self.size), BOARDS["board_black"])).convert("RGBA")
+            self.size), config.BOARDS["board_black"])).convert("RGBA")
         self.pieces = {}
         self.__load_cells_from_files()
 
     def __load_cells_from_files(self):
-        for attr, value in CELLS.items():
+        for attr, value in config.CELLS.items():
             setattr(self, attr, {})
             attribute = getattr(self, attr)
             for key, filename in value.items():

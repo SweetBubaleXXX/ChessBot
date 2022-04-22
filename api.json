@@ -14,5 +14,9 @@
       ]
     }
   },
-  "response": null
+  "response": {
+    "canMoveTo": "a3 a4 a5",
+    "canBeat": "b3",
+    "isMate": ""
+  }
 }
