@@ -11,7 +11,6 @@ from ..bot import bot, dp
 from ..db.db import get_user_by_username
 from ..dialogs import Messages
 from ..game import *
-from ..game.player import Player
 from ..keyboards import colors, invitation, modes
 
 
@@ -134,37 +133,42 @@ async def pick_piece(msg: types.Message, state: FSMContext):
 
     # try:
     picked = Coordinate(msg.text)
+    # except CoordinateError:
+    #     raise CoordinateError(Messages.pick_piece)
     cell = user_data["field"][picked.x][picked.y]
     if ((user_data["white"] and 64 < ord(cell) < 90) or
             (not user_data["white"] and 96 < ord(cell) < 123)):
         user_data["picked"] = str(picked)
-        await state.update_data(picked=user_data["picked"])
+        # await state.update_data(picked=user_data["picked"])
     else:
         raise CoordinateError(Messages.pick_piece)
-    # except CoordinateError:
-    #     raise CoordinateError(Messages.pick_piece)
 
-    response = await logic_API.pick(user_data["picked"], user_data["field"])
-
+    try:
+        response = await logic_API.pick(user_data["picked"], user_data["field"])
+    except Exception as e:
+        logging.error(e)
+        raise CoordinateError(answer=e, message="Ошибка в запросе")
+    if not response:
+        logging.error("No response")
     logging.info(response)
-    if response:
-        can_move = []
-        can_beat = []
-        if response.get("canMoveTo"):
-            move_arr = response.get("canMoveTo").split(" ")
-            if not move_arr[-1]: move_arr.pop()
-            for cell in move_arr:
-                can_move.append(Coordinate(cell).as_tuple())
-        if response.get("canBeat"):
-            beat_arr = response.get("canBeat").split(" ")
-            if beat_arr[-1]: beat_arr.pop()
-            for cell in beat_arr:
-                can_beat.append(Coordinate(cell).as_tuple())
-        if not (can_move or can_beat):
-            raise CoordinateError("Некуда ходить")
-        await state.update_data(can_move=can_move, can_beat=can_beat)
 
-        logging.info(f"{can_move=}\n{can_beat=}")
+    can_move = []
+    can_beat = []
+    if response.get("canMoveTo"):
+        move_arr = response.get("canMoveTo").split(" ")
+        if not move_arr[-1]: move_arr.pop()
+        for cell in move_arr:
+            can_move.append(Coordinate(cell).as_tuple())
+    if response.get("canBeat"):
+        beat_arr = response.get("canBeat").split(" ")
+        if not beat_arr[-1]: beat_arr.pop()
+        for cell in beat_arr:
+            can_beat.append(Coordinate(cell).as_tuple())
+    if not (can_move or can_beat):
+        raise CoordinateError(message=Messages.no_moves)
+    await state.update_data(picked=user_data["picked"], can_move=can_move, can_beat=can_beat)
+
+    logging.info(f"\n{can_move=}\n{can_beat=}")
 
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(
@@ -226,7 +230,7 @@ async def cancel_picked(call: types.CallbackQuery, state: FSMContext):
     await Game.pick_piece.set()
 
 
-@ dp.errors_handler(exception=CoordinateError)
+@dp.errors_handler(exception=CoordinateError)
 async def coordinate_error_handler(update: types.Update, exception: CoordinateError):
     await update.message.reply(exception.message)
     if exception.answer:

@@ -3,4 +3,4 @@ SELECT
 FROM
     users
 WHERE
-    username = ?
+    username = ? COLLATE NOCASE

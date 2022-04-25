@@ -31,7 +31,8 @@ async def start(msg: types.Message):
 async def cancel_game(msg: types.Message, state: FSMContext):
     user_data = await state.get_data()
     if user_data.get("opponent"):
-        await bot.send_message(user_data["opponent"], Messages.game_canceled, reply_markup=types.ReplyKeyboardRemove())
+        await bot.send_message(user_data["opponent"], Messages.game_canceled,
+                               reply_markup=types.ReplyKeyboardRemove())
         opponent_state = dp.current_state(chat=user_data["opponent"],
                                           user=user_data["opponent"])
         await opponent_state.finish()
@@ -39,16 +40,18 @@ async def cancel_game(msg: types.Message, state: FSMContext):
     await msg.reply(Messages.on_exit, reply_markup=types.ReplyKeyboardRemove())
 
 
-# async def cancel_invitation(msg: types.Message, state: FSMContext):
-#     user_data = await state.get_data()
-#     if user_data.get("opponent"):
-#         await bot.send_message(user_data["opponent"], Messages.game_canceled, reply_markup=types.ReplyKeyboardRemove())
-#         opponent_state = dp.current_state(chat=user_data["opponent"],
-#                                           user=user_data["opponent"])
-#         await opponent_state.finish()
-#     await state.finish()
-#     await msg.reply(Messages.on_exit, reply_markup=types.ReplyKeyboardRemove())
-
+@dp.message_handler(Command(CANCEL_COMMANDS, ignore_case=True),
+                    state=[Game.pending_join, Game.invitation])
+@dp.message_handler(Text(equals=CANCEL_COMMANDS, ignore_case=True),
+                    state=[Game.pending_join, Game.invitation])
+async def cancel_invitation(msg: types.Message, state: FSMContext):
+    user_data = await state.get_data()
+    if user_data.get("opponent"):
+        opponent_state = dp.current_state(chat=user_data["opponent"],
+                                          user=user_data["opponent"])
+        await opponent_state.finish()
+    await state.finish()
+    await msg.reply(Messages.on_exit, reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(Command(CANCEL_COMMANDS, ignore_case=True), state="*")

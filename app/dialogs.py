@@ -16,5 +16,6 @@ class Messages:
     picked: str = "<b>{picked}</b> → ..."
     moved: str = "<b>{picked}</b> → <u><b>{move}</b></u>"
     coordinate_error: str = "Неверная координата"
+    no_moves: str = "Эта фигура не может ходить 🤷🏿‍♂️"
     cancel_choise: str = "🚫 Отметить выбор 🚫"
     game_canceled: str = "Соперник вышел из игры :'("

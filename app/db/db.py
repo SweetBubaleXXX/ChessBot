@@ -2,7 +2,7 @@ import sqlite3
 from os import path
 from typing import Union
 
-from ..bot_config import DB_NAME
+from ..bot_config import DB_PATH
 
 PATH = path.dirname(__file__)
 SCHEMAS = {
@@ -15,7 +15,7 @@ for key, filename in SCHEMAS.items():
     with open(path.join(PATH, filename), "r") as f:
         SCHEMAS[key] = f.read()
 
-conn = sqlite3.connect(path.join(PATH, DB_NAME))
+conn = sqlite3.connect(DB_PATH)
 cursor = conn.cursor()
 
 
