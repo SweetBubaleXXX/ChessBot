@@ -8,7 +8,7 @@ from aiogram.dispatcher.filters import Command, Text
 
 from .. import bot_config
 from ..bot import bot, dp
-from ..db.db import get_user_by_username
+from ..db import db
 from ..dialogs import Messages
 from ..game import *
 from ..keyboards import colors, invitation, modes
@@ -18,6 +18,7 @@ from ..keyboards import colors, invitation, modes
 async def start_game(msg: types.Message):
     await msg.answer(Messages.modes, reply_markup=modes.keyboard)
     await Game.choose_game_mode.set()
+    db.append_user(msg.from_user.id, msg.from_user.mention)
 
 
 @dp.message_handler(Text(modes.buttons["friend"]), state=Game.choose_game_mode)
@@ -60,7 +61,7 @@ async def invite_opponent_reply(msg: types.Message):
 async def choose_opponent(msg: types.Message, state: FSMContext):
     if not re.match("^@[a-zA-Z0-9_]{1,32}$", msg.text):
         return await msg.reply(Messages.invalid_username)
-    user = get_user_by_username(msg.text)
+    user = db.get_user_by_username(msg.text)
     logging.info(user)
     if user is None:
         return await msg.reply(Messages.user_not_found)

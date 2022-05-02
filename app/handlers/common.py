@@ -19,8 +19,7 @@ async def start(msg: types.Message):
     username = msg.from_user.mention
     full_name = msg.from_user.full_name
     db.append_user(user_id, username)
-    user = db.get_user_by_username("@sweetBubaleXXX")
-    logging.info(user)
+    logging.info(username)
     await msg.answer(Messages.greeting.format(name=full_name))
 
 
