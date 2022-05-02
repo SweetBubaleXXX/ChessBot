@@ -18,9 +18,19 @@ async def start(msg: types.Message):
     user_id = msg.from_user.id
     username = msg.from_user.mention
     full_name = msg.from_user.full_name
+    if not username.startswith("@"):
+        db.append_user(user_id, user_id)
     db.append_user(user_id, username)
     logging.info(username)
     await msg.answer(Messages.greeting.format(name=full_name))
+
+
+@dp.message_handler(Command("nickname", ignore_case=True), state="*")
+async def get_my_nickname(msg: types.Message, state: FSMContext):
+    user = db.get_user_by_id(msg.from_user.id)
+    if user is None:
+        return
+    await msg.reply(user[1])
 
 
 @dp.message_handler(Command(CANCEL_COMMANDS, ignore_case=True),

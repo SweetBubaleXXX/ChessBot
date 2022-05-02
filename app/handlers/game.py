@@ -2,6 +2,7 @@ import logging
 import re
 from random import randint
 
+import aioredis
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, Text
@@ -18,7 +19,47 @@ from ..keyboards import colors, invitation, modes
 async def start_game(msg: types.Message):
     await msg.answer(Messages.modes, reply_markup=modes.keyboard)
     await Game.choose_game_mode.set()
-    db.append_user(msg.from_user.id, msg.from_user.mention)
+    if msg.from_user.mention.startswith("@"):
+        db.append_user(msg.from_user.id, msg.from_user.mention)
+
+
+@dp.message_handler(Text(modes.buttons["random"]), state=Game.choose_game_mode)
+async def random_game_mode(msg: types.Message, state: FSMContext):
+    redis_host = bot_config.REDIS_CONF.get("host") or "localhost"
+    redis_port = bot_config.REDIS_CONF.get("port") or 6379
+    redis = aioredis.from_url(f"redis://{redis_host}:{redis_port}",
+                              decode_responses=True)
+    rand_user = await redis.srandmember("pending_users")
+    if rand_user is None:
+        await redis.sadd(msg.from_user.id)
+        await msg.answer(Messages.searching_opponent,
+                         reply_markup=types.ReplyKeyboardMarkup())
+        await Game.searching_opponent.set()
+    opponent_state = dp.current_state(chat=int(rand_user), user=int(rand_user))
+    is_white = bool(randint(0, 1))
+    await state.update_data(field=FIELD,
+                            white=is_white,
+                            opponent=int(rand_user))
+    await opponent_state.update_data(field=FIELD,
+                                     white=not(is_white),
+                                     opponent=msg.from_user.id)
+    await send_field(msg.from_user.id, FIELD, is_white)
+    await send_field(rand_user, FIELD, not(is_white))
+    if is_white:
+        await bot.send_message(rand_user, Messages.pending_move,
+                               reply_markup=types.ReplyKeyboardRemove())
+        await opponent_state.set_state(Game.opponents_move)
+        await msg.answer(Messages.pick_piece,
+                         reply_markup=types.ReplyKeyboardRemove())
+        await Game.pick_piece.set()
+    else:
+        await bot.send_message(rand_user, Messages.pick_piece,
+                               reply_markup=types.ReplyKeyboardRemove())
+        await opponent_state.set_state(Game.pick_piece)
+        await msg.answer(Messages.pending_move,
+                         reply_markup=types.ReplyKeyboardRemove())
+        await Game.opponents_move.set()
+    await redis.close()
 
 
 @dp.message_handler(Text(modes.buttons["friend"]), state=Game.choose_game_mode)
@@ -157,12 +198,14 @@ async def pick_piece(msg: types.Message, state: FSMContext):
     can_beat = []
     if response.get("canMoveTo"):
         move_arr = response.get("canMoveTo").split(" ")
-        if not move_arr[-1]: move_arr.pop()
+        if not move_arr[-1]:
+            move_arr.pop()
         for cell in move_arr:
             can_move.append(Coordinate(cell).as_tuple())
     if response.get("canBeat"):
         beat_arr = response.get("canBeat").split(" ")
-        if not beat_arr[-1]: beat_arr.pop()
+        if not beat_arr[-1]:
+            beat_arr.pop()
         for cell in beat_arr:
             can_beat.append(Coordinate(cell).as_tuple())
     if not (can_move or can_beat):
