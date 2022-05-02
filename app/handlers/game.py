@@ -31,10 +31,10 @@ async def random_game_mode(msg: types.Message, state: FSMContext):
                               decode_responses=True)
     rand_user = await redis.srandmember("pending_users")
     if rand_user is None:
-        await redis.sadd(msg.from_user.id)
+        await redis.sadd("pending_users", msg.from_user.id)
         await msg.answer(Messages.searching_opponent,
                          reply_markup=types.ReplyKeyboardMarkup())
-        await Game.searching_opponent.set()
+        return await Game.searching_opponent.set()
     opponent_state = dp.current_state(chat=int(rand_user), user=int(rand_user))
     is_white = bool(randint(0, 1))
     await state.update_data(field=FIELD,
