@@ -3,6 +3,7 @@ class Messages:
     on_exit: str ="Ок"
     modes: str = "Выберите режим игры:"
     searching_opponent: str = "🔍 Поиск игроков 🔎"
+    opponent_found: str = "Ваш соперник — {name}"
     colors: str = "За кого играть?"
     invite_opponent: str = "Отправьте контакт (например {example})"
     invalid_username: str = "Неправильное имя пользователя"

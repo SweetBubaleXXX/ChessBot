@@ -1,10 +1,12 @@
 import logging
 
+import aioredis
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, CommandStart, Text
 
 from ..bot import bot, dp
+from ..bot_config import REDIS_URL
 from ..db import db
 from ..dialogs import Messages
 from ..game import Game
@@ -61,6 +63,18 @@ async def cancel_invitation(msg: types.Message, state: FSMContext):
         await opponent_state.finish()
     await state.finish()
     await msg.reply(Messages.on_exit, reply_markup=types.ReplyKeyboardRemove())
+
+
+@dp.message_handler(Command(CANCEL_COMMANDS, ignore_case=True),
+                    state=Game.searching_opponent)
+@dp.message_handler(Text(equals=CANCEL_COMMANDS, ignore_case=True),
+                    state=Game.searching_opponent)
+async def cancel_invitation(msg: types.Message, state: FSMContext):
+    redis = aioredis.from_url(REDIS_URL)
+    await redis.srem("pending_users", msg.from_user.id)
+    await state.finish()
+    await msg.reply(Messages.on_exit, reply_markup=types.ReplyKeyboardRemove())
+    await redis.close()
 
 
 @dp.message_handler(Command(CANCEL_COMMANDS, ignore_case=True), state="*")

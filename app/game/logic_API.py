@@ -2,12 +2,12 @@ import json
 
 import aiohttp
 
-from ..bot_config import BACK_URL
+from ..bot_config import API_URL
 
 
 async def pick(picked, field) -> dict:
     async with aiohttp.ClientSession() as session:
-        async with session.post(BACK_URL, data=json.dumps({
+        async with session.post(API_URL, data=json.dumps({
             "picked": picked,
             "field": field
         })) as r:

@@ -25,39 +25,42 @@ async def start_game(msg: types.Message):
 
 @dp.message_handler(Text(modes.buttons["random"]), state=Game.choose_game_mode)
 async def random_game_mode(msg: types.Message, state: FSMContext):
-    redis_host = bot_config.REDIS_CONF.get("host") or "localhost"
-    redis_port = bot_config.REDIS_CONF.get("port") or 6379
-    redis = aioredis.from_url(f"redis://{redis_host}:{redis_port}",
-                              decode_responses=True)
-    rand_user = await redis.srandmember("pending_users")
-    if rand_user is None:
+    redis = aioredis.from_url(bot_config.REDIS_URL, decode_responses=True)
+
+    rand_user_id = await redis.srandmember("pending_users")
+    if rand_user_id is None:
         await redis.sadd("pending_users", msg.from_user.id)
         await msg.answer(Messages.searching_opponent,
                          reply_markup=types.ReplyKeyboardMarkup())
         return await Game.searching_opponent.set()
-    opponent_state = dp.current_state(chat=int(rand_user), user=int(rand_user))
+    await redis.srem("pending_users", rand_user_id)
+    opponent_name = db.get_user_by_id(int(rand_user_id))[1]
+    my_name = db.get_user_by_id(msg.from_user.id)[1]
+    opponent_state = dp.current_state(chat=int(rand_user_id),
+                                      user=int(rand_user_id))
     is_white = bool(randint(0, 1))
     await state.update_data(field=FIELD,
                             white=is_white,
-                            opponent=int(rand_user))
+                            opponent=int(rand_user_id))
     await opponent_state.update_data(field=FIELD,
                                      white=not(is_white),
                                      opponent=msg.from_user.id)
+
+    await msg.answer(Messages.opponent_found.format(name=opponent_name),
+                     reply_markup=types.ReplyKeyboardRemove())
     await send_field(msg.from_user.id, FIELD, is_white)
-    await send_field(rand_user, FIELD, not(is_white))
+    await bot.send_message(rand_user_id, Messages.opponent_found.format(name=my_name),
+                           reply_markup=types.ReplyKeyboardRemove())
+    await send_field(rand_user_id, FIELD, not(is_white))
     if is_white:
-        await bot.send_message(rand_user, Messages.pending_move,
-                               reply_markup=types.ReplyKeyboardRemove())
+        await bot.send_message(rand_user_id, Messages.pending_move)
         await opponent_state.set_state(Game.opponents_move)
-        await msg.answer(Messages.pick_piece,
-                         reply_markup=types.ReplyKeyboardRemove())
+        await msg.answer(Messages.pick_piece)
         await Game.pick_piece.set()
     else:
-        await bot.send_message(rand_user, Messages.pick_piece,
-                               reply_markup=types.ReplyKeyboardRemove())
+        await bot.send_message(rand_user_id, Messages.pick_piece)
         await opponent_state.set_state(Game.pick_piece)
-        await msg.answer(Messages.pending_move,
-                         reply_markup=types.ReplyKeyboardRemove())
+        await msg.answer(Messages.pending_move)
         await Game.opponents_move.set()
     await redis.close()
 
@@ -104,6 +107,7 @@ async def choose_opponent(msg: types.Message, state: FSMContext):
         return await msg.reply(Messages.invalid_username)
     user = db.get_user_by_username(msg.text)
     logging.info(user)
+
     if user is None:
         return await msg.reply(Messages.user_not_found)
     if user[0] == msg.from_user.id:
@@ -111,6 +115,7 @@ async def choose_opponent(msg: types.Message, state: FSMContext):
     user_data = await state.get_data()
     opponent_id = user[0]
     opponent_state = dp.current_state(chat=opponent_id, user=opponent_id)
+
     async with opponent_state.proxy() as opponent_data:
         if opponent_data.get("opponent"):
             return await msg.reply(Messages.user_busy)
@@ -118,6 +123,7 @@ async def choose_opponent(msg: types.Message, state: FSMContext):
         opponent_data["opponent"] = msg.from_user.id
         opponent_data["white"] = not(user_data["white"])
         await opponent_state.set_state(Game.invitation)
+
     await state.update_data(opponent=opponent_id, field=FIELD)
     await bot.send_message(opponent_id,
                            Messages.invitation.format(
@@ -181,7 +187,6 @@ async def pick_piece(msg: types.Message, state: FSMContext):
     if ((user_data["white"] and 64 < ord(cell) < 90) or
             (not user_data["white"] and 96 < ord(cell) < 123)):
         user_data["picked"] = str(picked)
-        # await state.update_data(picked=user_data["picked"])
     else:
         raise CoordinateError(Messages.pick_piece)
 
