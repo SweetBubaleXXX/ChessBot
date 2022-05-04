@@ -15,7 +15,7 @@ from ..game import *
 from ..keyboards import colors, invitation, modes
 
 
-@dp.message_handler(Command('play', ignore_case=True), state="*")
+@dp.message_handler(Command('play', ignore_case=True))
 async def start_game(msg: types.Message):
     await msg.answer(Messages.modes, reply_markup=modes.keyboard)
     await Game.choose_game_mode.set()
@@ -103,7 +103,7 @@ async def invite_opponent_reply(msg: types.Message):
 
 @dp.message_handler(state=Game.invite_opponent)
 async def choose_opponent(msg: types.Message, state: FSMContext):
-    if not re.match("^@[a-zA-Z0-9_]{1,32}$", msg.text):
+    if not re.match("^@[a-zA-Z0-9_]{1,32}$|^[0-9]{1,10}$", msg.text):
         return await msg.reply(Messages.invalid_username)
     user = db.get_user_by_username(msg.text)
     logging.info(user)
@@ -206,7 +206,7 @@ async def pick_piece(msg: types.Message, state: FSMContext):
         if not move_arr[-1]:
             move_arr.pop()
         for cell in move_arr:
-            can_move.append(Coordinate(cell).as_tuple())
+            can_move.append(Coordinate(cell).as_list())
     if response.get("canBeat"):
         beat_arr = response.get("canBeat").split(" ")
         if not beat_arr[-1]:
@@ -247,8 +247,8 @@ async def move_piece(msg: types.Message, state: FSMContext):
         raise CoordinateError(Messages.pick_cell)
 
     field = user_data.get("field")
-    if (move.as_tuple() in user_data["can_move"] or
-            move.as_tuple() in user_data["can_beat"]):
+    if (move.as_list() in user_data["can_move"] or
+            move.as_list() in user_data["can_beat"]):
         field[move.x][move.y] = field[picked.x][picked.y]
         field[picked.x][picked.y] = "-"
     else:

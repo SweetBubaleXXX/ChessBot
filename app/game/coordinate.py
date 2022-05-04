@@ -25,6 +25,9 @@ class Coordinate:
     def as_tuple(self) -> tuple:
         return (self.x, self.y)
 
+    def as_list(self) -> list:
+        return [self.x, self.y]
+
     def __str__(self) -> str:
         return "".join([chr(self.y + 97), str(self.x + 1)])
 
