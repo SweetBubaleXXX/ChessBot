@@ -14,7 +14,7 @@ class Coordinate:
                 self.x = int(x_str) - 1
                 self.y = ord(y_str) - 97
                 if len(cut_str) >= 4:
-                    self.next = cut_str[2:4]
+                    self.next = Coordinate(cut_str[2:4])
             elif isinstance(coordinate, tuple):
                 self.x, self.y = coordinate
             if not (0 <= self.x < 8 and 0 <= self.y < 8):
@@ -32,7 +32,7 @@ class Coordinate:
         return "".join([chr(self.y + 97), str(self.x + 1)])
 
     def __eq__(self, __o: object) -> bool:
-        return self.picked == __o.picked
+        return str(self) == str(__o)
 
 
 class CoordinateError(Exception):

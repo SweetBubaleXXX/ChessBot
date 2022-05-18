@@ -184,8 +184,7 @@ async def pick_piece(msg: types.Message, state: FSMContext):
     # except CoordinateError:
     #     raise CoordinateError(Messages.pick_piece)
     cell = user_data["field"][picked.x][picked.y]
-    if ((user_data["white"] and 64 < ord(cell) < 90) or
-            (not user_data["white"] and 96 < ord(cell) < 123)):
+    if cell.isalpha() and user_data["white"] == cell.isupper():
         user_data["picked"] = str(picked)
     else:
         raise CoordinateError(Messages.pick_piece)
@@ -219,6 +218,10 @@ async def pick_piece(msg: types.Message, state: FSMContext):
 
     logging.info(f"\n{can_move=}\n{can_beat=}")
 
+    if hasattr(picked, "next"):
+        msg.text = str(picked.next)
+        return await move_piece(msg, state)
+
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(
         text=Messages.cancel_choise, callback_data="cancel_picked"))
@@ -249,8 +252,15 @@ async def move_piece(msg: types.Message, state: FSMContext):
     field = user_data.get("field")
     if (move.as_list() in user_data["can_move"] or
             move.as_list() in user_data["can_beat"]):
+        if field[picked.x][picked.y].lower() in "kr":
+            user_data["castling"] = False
         field[move.x][move.y] = field[picked.x][picked.y]
         field[picked.x][picked.y] = "-"
+    elif (field[move.x][move.y].isalpha() and
+          user_data["white"] == field[move.x][move.y].isupper()):
+        await state.update_data(picked=None)
+        msg.text = str(move)
+        await pick_piece(msg, state)
     else:
         raise CoordinateError(Messages.pick_cell)
     user_data["picked"] = False
