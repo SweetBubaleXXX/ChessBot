@@ -1,5 +1,6 @@
 class Messages:
     greeting: str = "Здравствуйте, <b>{name}</b>!!!"
+    greeting_id: str = "Здравствуйте, ваш id - <b>{id}</b>"
     on_exit: str ="Ок"
     modes: str = "Выберите режим игры:"
     searching_opponent: str = "🔍 Поиск игроков 🔎"

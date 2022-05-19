@@ -103,7 +103,7 @@ async def invite_opponent_reply(msg: types.Message):
 
 @dp.message_handler(state=Game.invite_opponent)
 async def choose_opponent(msg: types.Message, state: FSMContext):
-    if not re.match("^@[a-zA-Z0-9_]{1,32}$|^[0-9]{1,10}$", msg.text):
+    if not re.match("^@[a-zA-Z0-9_]{1,32}$|^[0-9]{1,12}$", msg.text):
         return await msg.reply(Messages.invalid_username)
     user = db.get_user_by_username(msg.text)
     logging.info(user)
@@ -260,7 +260,7 @@ async def move_piece(msg: types.Message, state: FSMContext):
           user_data["white"] == field[move.x][move.y].isupper()):
         await state.update_data(picked=None)
         msg.text = str(move)
-        await pick_piece(msg, state)
+        return await pick_piece(msg, state)
     else:
         raise CoordinateError(Messages.pick_cell)
     user_data["picked"] = False
