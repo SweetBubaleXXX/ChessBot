@@ -10,15 +10,17 @@ PATH = path.dirname(__file__)
 
 
 class Render:
-    def __init__(self, size: Optional[int] = None) -> None:
+    def __init__(self, size: Optional[int] = None, theme: Optional[int] = None) -> None:
         if size in config.SIZES:
             self.size = size
         else:
             self.size = config.SIZES[0]
+        self.theme = theme if theme in config.THEMES else config.THEMES[0]
+
         self.board_sizes = config.BOARD_SIZES[str(self.size)]
-        self.board = Image.open(path.join(PATH, "src", str(
+        self.board = Image.open(path.join(PATH, "src", self.theme, str(
             self.size), config.BOARDS["board"])).convert("RGBA")
-        self.board_black = Image.open(path.join(PATH, "src", str(
+        self.board_black = Image.open(path.join(PATH, "src", self.theme, str(
             self.size), config.BOARDS["board_black"])).convert("RGBA")
         self.pieces = {}
         self.__load_cells_from_files()
@@ -29,14 +31,14 @@ class Render:
             attribute = getattr(self, attr)
             for key, filename in value.items():
                 attribute[key] = Image.open(
-                    path.join(PATH, "src", str(self.size), filename))
+                    path.join(PATH, "src", self.theme, str(self.size), filename))
 
     def render(self, field: list, white: bool = True, **kwargs) -> bytes:
         """
-            picked: list[tuple] | None,
-            move: list[tuple] | None,
-            beat: list[tuple] | None,
-            check: list[tuple] | None
+            picked: list[tuple | list] | None,
+            move: list[tuple | list] | None,
+            beat: list[tuple | list] | None,
+            check: list[tuple | list] | None
         """
         board_copy = self.board.copy() if white else self.board_black.copy()
         width, border = self.board_sizes

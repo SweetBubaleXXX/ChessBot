@@ -1,10 +1,11 @@
 SIZES = [1100]
+THEMES = ["default"]
 BOARD_SIZES = {
     "1100": (128, 38)  # Cell size, border size
 }
 BOARDS = {
     "board": "board.png",
-    "board_black": "board-reverse.png",
+    "board_black": "board-reverse.png"
 }
 CELLS = {
     "pieces": {
