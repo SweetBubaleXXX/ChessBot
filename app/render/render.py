@@ -35,14 +35,15 @@ class Render:
 
     def render(self, field: list, white: bool = True, **kwargs) -> bytes:
         """
-            picked: list[tuple | list] | None,
-            move: list[tuple | list] | None,
-            beat: list[tuple | list] | None,
-            check: list[tuple | list] | None
+            picked: list[Iterable[int]] | None,
+            move: list[Iterable[int]] | None,
+            beat: list[Iterable[int]] | None,
+            check: list[Iterable[int]] | None
         """
         board_copy = self.board.copy() if white else self.board_black.copy()
         width, border = self.board_sizes
         for key, value in kwargs.items():
+            if value is None: continue
             for y, x in value:
                 if white:
                     y = 7 - y
