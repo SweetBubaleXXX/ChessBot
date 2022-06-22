@@ -1,5 +1,5 @@
 import re
-from typing import Union
+from typing import Union, Optional
 
 from ..dialogs import Messages
 
@@ -36,7 +36,7 @@ class Coordinate:
 
 
 class CoordinateError(Exception):
-    def __init__(self, answer: Union[str, None] = None,
+    def __init__(self, answer: Optional[str] = None,
                  message: str = Messages.coordinate_error) -> None:
         self.answer = answer
         self.message = message
