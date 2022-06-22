@@ -24,11 +24,11 @@ async def start(msg: types.Message):
     username = msg.from_user.mention
     full_name = msg.from_user.full_name
     if not username.startswith("@"):
-        logging.info(" - ".join((str(full_name), str(user_id))))
+        logging.info(f"New user: {' - '.join((str(full_name), str(user_id)))}")
         db.append_user(user_id, user_id)
         await msg.answer(Messages.greeting_id.format(id=user_id))
     db.append_user(user_id, username)
-    logging.info(username)
+    logging.info(f"New user: {username}")
     await msg.answer(Messages.greeting.format(name=full_name))
 
 

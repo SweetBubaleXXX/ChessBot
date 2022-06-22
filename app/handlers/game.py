@@ -106,7 +106,7 @@ async def choose_opponent(msg: types.Message, state: FSMContext):
     if not re.match("^@[a-zA-Z0-9_]{1,32}$|^[0-9]{1,12}$", msg.text):
         return await msg.reply(Messages.invalid_username)
     user = db.get_user_by_username(msg.text)
-    logging.info(user)
+    logging.info(f"User found: {user}")
 
     if user is None:
         return await msg.reply(Messages.user_not_found)
@@ -192,11 +192,11 @@ async def pick_piece(msg: types.Message, state: FSMContext):
     try:
         response = await logic_API.pick(user_data["picked"], user_data["field"])
     except Exception as e:
-        logging.error(e)
+        logging.error(f"Error in logic API - {e}")
         raise CoordinateError(answer=e, message="Ошибка в запросе")
     if not response:
-        logging.error("No response")
-    logging.info(response)
+        logging.error("No response from logic API server")
+    logging.info(f"Response from logic API server:\n{response}")
 
     can_move = []
     can_beat = []
@@ -216,7 +216,7 @@ async def pick_piece(msg: types.Message, state: FSMContext):
         raise CoordinateError(message=Messages.no_moves)
     await state.update_data(picked=user_data["picked"], can_move=can_move, can_beat=can_beat)
 
-    logging.info(f"\n{can_move=}\n{can_beat=}")
+    logging.info(f"{can_move=}\n{can_beat=}")
 
     if hasattr(picked, "next"):
         msg.text = str(picked.next)

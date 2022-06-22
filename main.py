@@ -5,7 +5,7 @@ from aiogram import Dispatcher, executor
 from app.bot import dp
 from app.handlers import *
 
-_log_format = f"%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s"
+_log_format = f"%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d):\n\t%(message)s"
 
 
 async def shutdown(dispatcher: Dispatcher):
