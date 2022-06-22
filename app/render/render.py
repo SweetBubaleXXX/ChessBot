@@ -43,7 +43,7 @@ class Render:
         board_copy = self.board.copy() if white else self.board_black.copy()
         width, border = self.board_sizes
         for key, value in kwargs.items():
-            if value is None: continue
+            if not value: continue
             for y, x in value:
                 if white:
                     y = 7 - y

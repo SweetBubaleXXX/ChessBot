@@ -18,6 +18,7 @@ class Messages:
     pick_cell: str = "Выберите куда ходить:"
     picked: str = "<b>{picked}</b> → ..."
     moved: str = "<b>{picked}</b> → <u><b>{move}</b></u>"
+    check: str = "<b>ШАХ!!!</b>"
     coordinate_error: str = "Неверная координата"
     no_moves: str = "Эта фигура не может ходить 🤷🏿‍♂️"
     cancel_choise: str = "🚫 Отметить выбор 🚫"

@@ -31,7 +31,7 @@ async def random_game_mode(msg: types.Message, state: FSMContext):
     if rand_user_id is None:
         await redis.sadd("pending_users", msg.from_user.id)
         await msg.answer(Messages.searching_opponent,
-                         reply_markup=types.ReplyKeyboardMarkup())
+                         reply_markup=types.ReplyKeyboardRemove())
         return await Game.searching_opponent.set()
     await redis.srem("pending_users", rand_user_id)
     opponent_name = db.get_user_by_id(int(rand_user_id))[1]
@@ -200,23 +200,22 @@ async def pick_piece(msg: types.Message, state: FSMContext):
 
     can_move = []
     can_beat = []
-    if response.get("canMoveTo"):
-        move_arr = response.get("canMoveTo").split(" ")
-        if not move_arr[-1]:
-            move_arr.pop()
-        for cell in move_arr:
-            can_move.append(Coordinate(cell).as_list())
-    if response.get("canBeat"):
-        beat_arr = response.get("canBeat").split(" ")
-        if not beat_arr[-1]:
-            beat_arr.pop()
-        for cell in beat_arr:
-            can_beat.append(Coordinate(cell).as_tuple())
-    if not (can_move or can_beat):
-        raise CoordinateError(message=Messages.no_moves)
-    await state.update_data(picked=user_data["picked"], can_move=can_move, can_beat=can_beat)
+    will_check = []
+    will_mate = []
+    parse_response(can_move, response.get("canMoveTo"))
+    parse_response(can_beat, response.get("canBeat"))
+    parse_response(will_check, response.get("Checks"))
+    parse_response(will_mate, response.get("Mates"))
 
-    logging.info(f"{can_move=}\n{can_beat=}")
+    if not (can_move or can_beat or will_check or will_mate):
+        raise CoordinateError(message=Messages.no_moves)
+    await state.update_data(picked=user_data["picked"],
+                            can_move=can_move,
+                            can_beat=can_beat,
+                            will_check=will_check,
+                            will_mate=will_mate)
+
+    logging.info(f"{can_move=}\n{can_beat=}\n{will_check=}\n{will_mate=}")
 
     if hasattr(picked, "next"):
         msg.text = str(picked.next)
@@ -250,8 +249,12 @@ async def move_piece(msg: types.Message, state: FSMContext):
         raise CoordinateError(Messages.pick_cell)
 
     field = user_data.get("field")
+    # if (move.as_list() in [user_data["can_move"],
+    #                        user_data["can_beat"],
+    #                        user_data["will_check"]]):
     if (move.as_list() in user_data["can_move"] or
-            move.as_list() in user_data["can_beat"]):
+        move.as_list() in user_data["can_beat"] or
+            move.as_list() in user_data["will_check"]):
         if field[picked.x][picked.y].lower() in "kr":
             user_data["castling"] = False
         field[move.x][move.y] = field[picked.x][picked.y]
@@ -274,7 +277,19 @@ async def move_piece(msg: types.Message, state: FSMContext):
     opponent_state = dp.current_state(chat=user_data["opponent"],
                                       user=user_data["opponent"])
     await opponent_state.update_data(field=field)
-    await send_field(user_data["opponent"], field, not(user_data["white"]))
+    if move.as_list() in user_data["will_check"]:
+        for y, row in enumerate(user_data["field"]):
+            for x, piece in enumerate(row):
+                if user_data["white"] and piece.islower() and piece.lower() == "k":
+                    await send_field(user_data["opponent"], field,
+                                     not(user_data["white"]), check=[[y, x]])
+                    break
+            else:
+                continue
+            break
+        await bot.send_message(user_data["opponent"], Messages.check)
+    else:
+        await send_field(user_data["opponent"], field, not(user_data["white"]))
     await bot.send_message(user_data["opponent"],
                            Messages.moved.format(picked=str(picked), move=str(move)))
     await bot.send_message(user_data["opponent"], Messages.pick_piece)
