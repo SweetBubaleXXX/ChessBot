@@ -4,7 +4,6 @@
 *Dockerfile*
 docker-compose*
 .*env*
-.production
 api.json
 README*
 *.sqlite
