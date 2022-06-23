@@ -1,0 +1,8 @@
+.vscode
+.git*
+*Dockerfile*
+docker-compose*
+.*env*
+*__pychache__*
+api.json
+README*

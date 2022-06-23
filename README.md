@@ -21,3 +21,9 @@ GOD_MODE = False # Prevent checking move position
 [REDIS_CONF options](https://docs.aiogram.dev/en/latest/dispatcher/fsm.html#aiogram.contrib.fsm_storage.redis.RedisStorage2)
 
 -----
+
+## Note
+
+**DB_PATH** when using in docker container should be `"/db/{DB_NAME}"`.
+
+-----
