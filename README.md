@@ -24,6 +24,9 @@ GOD_MODE = False # Prevent checking move position
 
 ## Note
 
-**DB_PATH** when using in docker container should be `"/db/{DB_NAME}"`.
+If you're using app inside docker container, there should be several differences in `bot_config.py` file:
+
+- **`DB_PATH`** should be `"/db/{DB_NAME}"`;
+- **`REDIS_CONF.port`** should be `6379`;
 
 -----
