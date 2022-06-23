@@ -1,9 +1,10 @@
 .vscode
 .git*
+*__pychache__*
 *Dockerfile*
 docker-compose*
 .*env*
-*__pychache__*
+.production
 api.json
 README*
-.production
+*.sqlite
