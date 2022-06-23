@@ -6,3 +6,4 @@ docker-compose*
 *__pychache__*
 api.json
 README*
+.production

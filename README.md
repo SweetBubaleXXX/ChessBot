@@ -1,6 +1,6 @@
 ## Configuration
 
-File `bot_config.py` should be in `./app` directory.
+File *`bot_config.py`* should be in *`./app`* directory.
 
 ### Example of bot_config.py
 
@@ -22,11 +22,34 @@ GOD_MODE = False # Prevent checking move position
 
 -----
 
-## Note
+## Notes
 
-If you're using app inside docker container, there should be several differences in `bot_config.py` file:
+If you're using app inside docker container, there should be several differences in *`bot_config.py`* file:
 
 - **`DB_PATH`** should be `"/db/{DB_NAME}"`;
-- **`REDIS_CONF.port`** should be `6379`;
+- **`REDIS_CONF.port`** should be `6379`.
+
+-----
+
+## Docker
+
+### Build image
+
+```bash
+docker build -t {name} --build-arg CONFIG_PATH={path} .
+```
+
+If you want to have different config files for development and production, you can put another *`bot_config.py`* file to *`./.production`* directory and specify path in *`CONFIG_PATH`* build argument. This file will be used in your docker image.
+
+### Run container
+
+```bash
+docker run -it -v {volume_with_database}:/db [IMAGE] {options}
+```
+
+To see options, run:
+```bash
+python main.py --help
+```
 
 -----
