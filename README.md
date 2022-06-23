@@ -14,6 +14,8 @@ REDIS_CONF = { # Configuration of redis storage
     "prefix": ...
 }
 REDIS_URL # Url of redis database
+
+GOD_MODE = False # Prevent checking move position
 ```
 
 [REDIS_CONF options](https://docs.aiogram.dev/en/latest/dispatcher/fsm.html#aiogram.contrib.fsm_storage.redis.RedisStorage2)

@@ -193,19 +193,16 @@ async def pick_piece(msg: types.Message, state: FSMContext):
         response = await logic_API.pick(user_data["picked"], user_data["field"])
     except Exception as e:
         logging.error(f"Error in logic API - {e}")
-        raise CoordinateError(answer=e, message="Ошибка в запросе")
+        raise CoordinateError(answer=e,
+                              message="SERVER ERROR: Ошибка в запросе")
     if not response:
         logging.error("No response from logic API server")
     logging.info(f"Response from logic API server:\n{response}")
 
-    can_move = []
-    can_beat = []
-    will_check = []
-    will_mate = []
-    parse_response(can_move, response.get("canMoveTo"))
-    parse_response(can_beat, response.get("canBeat"))
-    parse_response(will_check, response.get("Checks"))
-    parse_response(will_mate, response.get("Mates"))
+    can_move = parse_response(response.get("canMoveTo"))
+    can_beat = parse_response(response.get("canBeat"))
+    will_check = parse_response(response.get("Checks"))
+    will_mate = parse_response(response.get("Mates"))
 
     if not (can_move or can_beat or will_check or will_mate):
         raise CoordinateError(message=Messages.no_moves)
@@ -249,12 +246,13 @@ async def move_piece(msg: types.Message, state: FSMContext):
         raise CoordinateError(Messages.pick_cell)
 
     field = user_data.get("field")
-    # if (move.as_list() in [user_data["can_move"],
-    #                        user_data["can_beat"],
-    #                        user_data["will_check"]]):
-    if (move.as_list() in user_data["can_move"] or
-        move.as_list() in user_data["can_beat"] or
-            move.as_list() in user_data["will_check"]):
+    # if (move.as_list() in user_data["can_move"] or
+    #     move.as_list() in user_data["can_beat"] or
+    #         move.as_list() in user_data["will_check"]):
+    if (bot_config.GOD_MODE or
+        any(move.as_list() in line for line in [user_data["can_move"],
+                                                user_data["can_beat"],
+                                                user_data["will_check"]])):
         if field[picked.x][picked.y].lower() in "kr":
             user_data["castling"] = False
         field[move.x][move.y] = field[picked.x][picked.y]
@@ -269,7 +267,18 @@ async def move_piece(msg: types.Message, state: FSMContext):
     user_data["picked"] = False
     await state.update_data(**user_data)
 
-    await send_field(msg.from_user.id, field, user_data["white"])
+    king_pos = []
+    if move.as_list() in user_data["will_check"]:
+        for y, row in enumerate(user_data["field"]):
+            for x, piece in enumerate(row):
+                if user_data["white"] and piece.islower() and piece.lower() == "k":
+                    king_pos.append([y, x])
+                    break
+            else:
+                continue
+            break
+
+    await send_field(msg.from_user.id, field, user_data["white"], check=king_pos)
     await msg.answer(Messages.moved.format(picked=str(picked), move=str(move)))
     await msg.answer(Messages.pending_move)
     await Game.opponents_move.set()
@@ -278,18 +287,8 @@ async def move_piece(msg: types.Message, state: FSMContext):
                                       user=user_data["opponent"])
     await opponent_state.update_data(field=field)
     if move.as_list() in user_data["will_check"]:
-        for y, row in enumerate(user_data["field"]):
-            for x, piece in enumerate(row):
-                if user_data["white"] and piece.islower() and piece.lower() == "k":
-                    await send_field(user_data["opponent"], field,
-                                     not(user_data["white"]), check=[[y, x]])
-                    break
-            else:
-                continue
-            break
         await bot.send_message(user_data["opponent"], Messages.check)
-    else:
-        await send_field(user_data["opponent"], field, not(user_data["white"]))
+    await send_field(user_data["opponent"], field, not(user_data["white"]), check=king_pos)
     await bot.send_message(user_data["opponent"],
                            Messages.moved.format(picked=str(picked), move=str(move)))
     await bot.send_message(user_data["opponent"], Messages.pick_piece)
