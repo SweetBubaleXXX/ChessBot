@@ -24,10 +24,7 @@ GOD_MODE = False # Prevent checking move position
 
 ## Notes
 
-If you're using app inside docker container, there should be several differences in *`bot_config.py`* file:
-
-- **`DB_PATH`** should be `"/db/{DB_NAME}"`;
-- **`REDIS_CONF.port`** should be `6379`.
+If you're using app inside docker container, *`DB_PATH`* should be `"/db/{DB_NAME}"`.
 
 -----
 
@@ -51,5 +48,9 @@ To see options, run:
 ```bash
 python main.py --help
 ```
+
+### Docker compose
+
+You can put *`docker-compose.yml`* and *`.env`* files to *`./production`* directory.
 
 -----

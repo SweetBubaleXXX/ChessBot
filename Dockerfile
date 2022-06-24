@@ -6,7 +6,7 @@ WORKDIR /bot
 
 COPY . ./
 
-COPY ${CONFIG_PATH} ./app/bot_config.py
+COPY ${CONFIG_PATH} ./app/
 
 RUN pip3 install -r requirements.txt
 
