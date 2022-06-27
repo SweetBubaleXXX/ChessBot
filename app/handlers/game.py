@@ -6,6 +6,7 @@ import aioredis
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, Text
+from aiogram.utils.callback_data import CallbackData
 
 from .. import bot_config
 from ..bot import bot, dp
@@ -13,6 +14,8 @@ from ..db import db
 from ..dialogs import Messages
 from ..game import *
 from ..keyboards import colors, invitation, modes
+
+change_pawn_cb = CallbackData("piece")
 
 
 @dp.message_handler(Command('play', ignore_case=True))
@@ -252,13 +255,27 @@ async def move_piece(msg: types.Message, state: FSMContext):
             user_data["castling"] = False
         field[move.x][move.y] = field[picked.x][picked.y]
         field[picked.x][picked.y] = "-"
+        if (picked.x == 0 and field[move.x][move.y] == "p" or
+                picked.x == 7 and field[move.x][move.y] == "P"):
+            keyboard = types.InlineKeyboardMarkup()
+            for callback, text in {
+                "q": Messages.queen,
+                "h": Messages.knight,
+                "b": Messages.bishop,
+                "r": Messages.rook
+            }.items():
+                keyboard.add(types.InlineKeyboardButton(
+                    text=text, callback_data=change_pawn_cb.new(callback)))
+            await msg.answer(Messages.change_pawn, reply_markup=keyboard)
+            await state.update_data(picked=str(move))
+            return await Game.change_pawn.set()
     elif (field[move.x][move.y].isalpha() and
           user_data["white"] == field[move.x][move.y].isupper()):
         await state.update_data(picked=None)
         msg.text = str(move)
         return await pick_piece(msg, state)
     else:
-        raise CoordinateError(Messages.pick_cell)
+        raise CoordinateError()
     user_data["picked"] = False
     await state.update_data(**user_data)
 
@@ -291,7 +308,7 @@ async def move_piece(msg: types.Message, state: FSMContext):
     await opponent_state.update_data(field=field)
     await send_field(user_data["opponent"], field, not(user_data["white"]), check=king_pos)
     await bot.send_message(user_data["opponent"],
-                        Messages.moved.format(picked=str(picked), move=str(move)))
+                           Messages.moved.format(picked=str(picked), move=str(move)))
     if mate:
         await bot.send_message(user_data["opponent"], Messages.mate)
         await opponent_state.finish()
@@ -306,9 +323,25 @@ async def move_piece(msg: types.Message, state: FSMContext):
 @dp.callback_query_handler(text="cancel_picked", state=Game.move_piece)
 async def cancel_picked(call: types.CallbackQuery, state: FSMContext):
     await state.update_data(picked=False)
+    await Game.pick_piece.set()
     await call.message.answer(Messages.pick_piece)
     await call.answer()
-    await Game.pick_piece.set()
+
+
+@dp.callback_query_handler(change_pawn_cb.filter(), state=Game.change_pawn)
+async def change_pawn(call: types.CallbackQuery, callback_data: dict, state: FSMContext):
+    user_data = await state.get_data()
+    field = user_data["field"]
+    picked = Coordinate(user_data["picked"])
+    if user_data["white"]:
+        piece = callback_data["piece"].upper()
+    else:
+        piece = callback_data["piece"]
+    field[picked.x][picked.y] = piece
+    await state.update_data(field=field)
+    await Game.move_piece.set()
+    await call.answer()
+    return await move_piece(msg, state)
 
 
 @dp.errors_handler(exception=CoordinateError)

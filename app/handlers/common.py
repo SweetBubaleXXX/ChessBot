@@ -14,7 +14,7 @@ from ..game import Game
 CANCEL_COMMANDS = ["cancel", "exit", "close",
                    "fuckyou", "stop", "отмена", "стоп"]
 
-states_for_cancel_game = [Game.pick_piece, Game.move_piece,
+states_for_cancel_game = [Game.pick_piece, Game.move_piece, Game.change_pawn,
                           Game.opponents_move, Game.pending_join, Game.invitation]
 
 

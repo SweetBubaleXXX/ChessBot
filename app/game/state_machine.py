@@ -13,3 +13,4 @@ class Game(StatesGroup):
     opponents_move = State()
     pick_piece = State()
     move_piece = State()
+    change_pawn = State()
