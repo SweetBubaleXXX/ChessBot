@@ -9,7 +9,9 @@ SCHEMAS = {
     "create_table_users": "create_table_users.sql",
     "insert_user": "insert_user.sql",
     "get_user_by_id": "get_user_by_id.sql",
-    "get_user_by_username": "get_user_by_username.sql"
+    "get_user_by_username": "get_user_by_username.sql",
+    "increase_wins": "increase_wins.sql",
+    "increase_losses": "increase_losses.sql"
 }
 
 for key, filename in SCHEMAS.items():
@@ -24,7 +26,7 @@ def create_table_users():
     cursor.executescript(SCHEMAS["create_table_users"])
 
 
-def append_user(id: int, username: str):
+def insert_user(id: int, username: str):
     cursor.execute(SCHEMAS["insert_user"], (id, username))
     conn.commit()
 
@@ -37,3 +39,13 @@ def get_user_by_id(id: int) -> Union[tuple, None]:
 def get_user_by_username(username: str) -> Union[tuple, None]:
     cursor.execute(SCHEMAS["get_user_by_username"], (username,))
     return cursor.fetchone()
+
+
+def increase_wins(id: int):
+    cursor.execute(SCHEMAS["increase_wins"], (id,))
+    conn.commit()
+
+
+def increase_losses(id: int):
+    cursor.execute(SCHEMAS["increase_losses"], (id,))
+    conn.commit()
