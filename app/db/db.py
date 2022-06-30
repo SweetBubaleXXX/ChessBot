@@ -3,11 +3,13 @@ from os import path
 from typing import Union
 
 from ..bot_config import DB_PATH
+from .user_model import UserModel
 
 PATH = path.dirname(__file__)
 SCHEMAS = {
     "create_table_users": "create_table_users.sql",
     "insert_user": "insert_user.sql",
+    "update_username": "update_username.sql",
     "get_user_by_id": "get_user_by_id.sql",
     "get_user_by_username": "get_user_by_username.sql",
     "increase_wins": "increase_wins.sql",
@@ -31,14 +33,21 @@ def insert_user(id: int, username: str):
     conn.commit()
 
 
-def get_user_by_id(id: int) -> Union[tuple, None]:
+def update_username(id: int, username: str):
+    cursor.execute(SCHEMAS["update_username"], (username, id))
+    conn.commit()
+
+
+def get_user_by_id(id: int) -> Union[UserModel, None]:
     cursor.execute(SCHEMAS["get_user_by_id"], (id,))
-    return cursor.fetchone()
+    db_output = cursor.fetchone()
+    return db_output and UserModel(*db_output)
 
 
-def get_user_by_username(username: str) -> Union[tuple, None]:
+def get_user_by_username(username: str) -> Union[UserModel, None]:
     cursor.execute(SCHEMAS["get_user_by_username"], (username,))
-    return cursor.fetchone()
+    db_output = cursor.fetchone()
+    return db_output and UserModel(*db_output)
 
 
 def increase_wins(id: int):

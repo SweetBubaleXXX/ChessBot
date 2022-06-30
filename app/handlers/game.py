@@ -3,7 +3,7 @@ import re
 from random import randint
 
 import aioredis
-from aiogram import Dispatcher, types
+from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, Text
 from aiogram.utils.callback_data import CallbackData
@@ -12,7 +12,8 @@ from .. import bot_config
 from ..bot import bot, dp
 from ..db import db
 from ..dialogs import Messages
-from ..game import *
+from ..game import (FIELD, Coordinate, CoordinateError, Game, logic_API,
+                    parse_response, send_field)
 from ..keyboards import colors, invitation, modes
 
 change_pawn_cb = CallbackData("piece")
@@ -23,7 +24,7 @@ async def start_game(msg: types.Message):
     await msg.answer(Messages.modes, reply_markup=modes.keyboard)
     await Game.choose_game_mode.set()
     if msg.from_user.mention.startswith("@"):
-        db.insert_user(msg.from_user.id, msg.from_user.mention)
+        db.update_username(msg.from_user.id, msg.from_user.mention)
 
 
 @dp.message_handler(Text(modes.buttons["random"]), state=Game.choose_game_mode)
@@ -37,8 +38,9 @@ async def random_game_mode(msg: types.Message, state: FSMContext):
                          reply_markup=types.ReplyKeyboardRemove())
         return await Game.searching_opponent.set()
     await redis.srem("pending_users", rand_user_id)
-    opponent_name = db.get_user_by_id(int(rand_user_id))[1]
-    my_name = db.get_user_by_id(msg.from_user.id)[1]
+
+    opponent = db.get_user_by_id(int(rand_user_id))
+    my_username = db.get_user_by_id(msg.from_user.id).username
     opponent_state = dp.current_state(chat=int(rand_user_id),
                                       user=int(rand_user_id))
     is_white = bool(randint(0, 1))
@@ -49,9 +51,10 @@ async def random_game_mode(msg: types.Message, state: FSMContext):
                                      white=not(is_white),
                                      opponent=msg.from_user.id)
 
-    await msg.answer(Messages.opponent_found.format(name=opponent_name))
+    await msg.answer(Messages.opponent_found.format(username=opponent.username))
     await send_field(msg.from_user.id, FIELD, is_white)
-    await bot.send_message(rand_user_id, Messages.opponent_found.format(name=my_name))
+    await bot.send_message(rand_user_id,
+                           Messages.opponent_found.format(username=my_username))
     await send_field(rand_user_id, FIELD, not(is_white))
     if is_white:
         await bot.send_message(rand_user_id, Messages.pending_move)
@@ -106,15 +109,16 @@ async def invite_opponent_reply(msg: types.Message):
 async def choose_opponent(msg: types.Message, state: FSMContext):
     if not re.match("^@[a-zA-Z0-9_]{1,32}$|^[0-9]{1,12}$", msg.text):
         return await msg.reply(Messages.invalid_username)
+
     user = db.get_user_by_username(msg.text)
     logging.info(f"User found: {user}")
 
     if user is None:
         return await msg.reply(Messages.user_not_found)
-    if user[0] == msg.from_user.id:
+    if user.id == msg.from_user.id:
         return await msg.reply(Messages.invalid_username)
     user_data = await state.get_data()
-    opponent_id = user[0]
+    opponent_id = user.id
     opponent_state = dp.current_state(chat=opponent_id, user=opponent_id)
 
     async with opponent_state.proxy() as opponent_data:
@@ -125,10 +129,14 @@ async def choose_opponent(msg: types.Message, state: FSMContext):
         opponent_data["white"] = not(user_data["white"])
         await opponent_state.set_state(Game.invitation)
 
+    sender = db.get_user_by_id(msg.from_id)
+    sender_username = sender and sender.username or str(msg.from_user.id)
+
     await state.update_data(opponent=opponent_id, field=FIELD)
     await bot.send_message(opponent_id,
                            Messages.invitation.format(
-                               name=msg.from_user.full_name),
+                               name=msg.from_user.full_name,
+                               username=sender_username),
                            reply_markup=invitation.keyboard)
     await msg.answer(Messages.pending_join)
     await Game.pending_join.set()
@@ -177,10 +185,7 @@ async def pick_piece(msg: types.Message, state: FSMContext):
     if user_data.get("picked"):
         return
 
-    # try:
     picked = Coordinate(msg.text)
-    # except CoordinateError:
-    #     raise CoordinateError(Messages.pick_piece)
     cell = user_data["field"][picked.x][picked.y]
     if cell.isalpha() and user_data["white"] == cell.isupper():
         user_data["picked"] = str(picked)
@@ -271,7 +276,7 @@ async def move_piece(msg: types.Message, state: FSMContext):
             return await Game.change_pawn.set()
     elif (field[move.x][move.y].isalpha() and
           user_data["white"] == field[move.x][move.y].isupper()):
-        await state.update_data(picked=None)
+        await state.update_data(picked=False)
         msg.text = str(move)
         return await pick_piece(msg, state)
     else:
@@ -312,12 +317,11 @@ async def move_piece(msg: types.Message, state: FSMContext):
     if mate:
         await bot.send_message(user_data["opponent"], Messages.mate)
         await opponent_state.finish()
-        db.increase_losses(user_data["opponent"])
+        return db.increase_losses(user_data["opponent"])
     elif check:
         await bot.send_message(user_data["opponent"], Messages.check)
-    else:
-        await bot.send_message(user_data["opponent"], Messages.pick_piece)
-        await opponent_state.set_state(Game.pick_piece)
+    await bot.send_message(user_data["opponent"], Messages.pick_piece)
+    await opponent_state.set_state(Game.pick_piece)
 
 
 @dp.callback_query_handler(text="cancel_picked", state=Game.move_piece)
@@ -328,20 +332,20 @@ async def cancel_picked(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
 
 
-@dp.callback_query_handler(change_pawn_cb.filter(), state=Game.change_pawn)
-async def change_pawn(call: types.CallbackQuery, callback_data: dict, state: FSMContext):
-    user_data = await state.get_data()
-    field = user_data["field"]
-    picked = Coordinate(user_data["picked"])
-    if user_data["white"]:
-        piece = callback_data["piece"].upper()
-    else:
-        piece = callback_data["piece"]
-    field[picked.x][picked.y] = piece
-    await state.update_data(field=field)
-    await Game.move_piece.set()
-    await call.answer()
-    return await move_piece(msg, state)
+# @dp.callback_query_handler(change_pawn_cb.filter(), state=Game.change_pawn)
+# async def change_pawn(call: types.CallbackQuery, callback_data: dict, state: FSMContext):
+#     user_data = await state.get_data()
+#     field = user_data["field"]
+#     picked = Coordinate(user_data["picked"])
+#     if user_data["white"]:
+#         piece = callback_data["piece"].upper()
+#     else:
+#         piece = callback_data["piece"]
+#     field[picked.x][picked.y] = piece
+#     await state.update_data(field=field)
+#     await Game.move_piece.set()
+#     await call.answer()
+#     return await move_piece(msg, state)
 
 
 @dp.errors_handler(exception=CoordinateError)

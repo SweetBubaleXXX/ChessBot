@@ -37,7 +37,7 @@ async def get_my_nickname(msg: types.Message, state: FSMContext):
     user = db.get_user_by_id(msg.from_user.id)
     if user is None:
         return
-    await msg.reply(user[1])
+    await msg.reply(user.username)
 
 
 @dp.message_handler(Command(CANCEL_COMMANDS, ignore_case=True),
