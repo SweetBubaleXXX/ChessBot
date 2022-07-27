@@ -10,7 +10,7 @@ class Messages:
     invalid_username: str = "Неправильное имя пользователя"
     user_not_found: str = "Пользователь с таким именем не найден"
     user_busy: str = "Пользователь сейчас находится в игре"
-    invitation: str = "Приглашение в игру от <b>{name}</b> <i>{username}<\i>"
+    invitation: str = "Приглашение в игру от <b>{name}</b> <i>{username}</i>"
     invitation_canceled: str = "Пользователь отклонил приглашение"
     pending_join: str = "Ждём ответ от пользователя"
     pending_move: str = "Ход соперника..."
