@@ -17,7 +17,7 @@ class Messages:
     coordinate_example: str = "Например <u><b>a4</b></u>"
     pick_piece: str = "Выберите фигуру:"
     pick_cell: str = "Выберите куда ходить:"
-    change_pawn: str = "Выберите фигуру вместо пешки"
+    promote_pawn: str = "Выберите фигуру вместо пешки"
     queen: str = "♕ Королева ♕"
     knight: str = "♘ Конь ♘"
     bishop: str = "♗ Слон ♗"

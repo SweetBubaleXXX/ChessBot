@@ -1,5 +1,5 @@
 import re
-from typing import Union, Optional
+from typing import Optional, Union
 
 from ..dialogs import Messages
 
@@ -22,17 +22,31 @@ class Coordinate:
         except (ValueError, IndexError):
             raise CoordinateError
 
-    def as_tuple(self) -> tuple:
-        return (self.x, self.y)
-
-    def as_list(self) -> list:
-        return [self.x, self.y]
-
     def __str__(self) -> str:
         return "".join([chr(self.y + 97), str(self.x + 1)])
 
     def __eq__(self, __o: object) -> bool:
         return str(self) == str(__o)
+
+    def __iter__(self):
+        self._n = True
+        return self
+
+    def __next__(self):
+        if self._n == 0:
+            self._n += 1
+            return self.x
+        elif self._n == 1:
+            self._n += 1
+            return self.y
+        else:
+            raise StopIteration
+
+    def as_tuple(self) -> tuple:
+        return (self.x, self.y)
+
+    def as_list(self) -> list:
+        return [self.x, self.y]
 
 
 class CoordinateError(Exception):

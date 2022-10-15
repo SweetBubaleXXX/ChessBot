@@ -10,7 +10,7 @@ PATH = path.dirname(__file__)
 
 
 class Render:
-    def __init__(self, size: Optional[int] = None, theme: Optional[int] = None) -> None:
+    def __init__(self, size: Optional[int] = None, theme: Optional[str] = None) -> None:
         if size in config.SIZES:
             self.size = size
         else:

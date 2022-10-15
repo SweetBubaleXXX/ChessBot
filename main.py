@@ -29,6 +29,7 @@ async def shutdown(dispatcher: Dispatcher):
     await dispatcher.storage.close()
     await dispatcher.storage.wait_closed()
 
+
 if __name__ == "__main__":
     logging.basicConfig(level=loglevel, format=_log_format)
     executor.start_polling(dp, on_shutdown=shutdown)

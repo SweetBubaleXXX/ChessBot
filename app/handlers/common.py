@@ -14,7 +14,7 @@ from ..game import Game
 CANCEL_COMMANDS = ["cancel", "exit", "close",
                    "fuckyou", "stop", "отмена", "стоп"]
 
-states_for_cancel_game = [Game.pick_piece, Game.move_piece, Game.change_pawn,
+states_for_cancel_game = [Game.pick_piece, Game.move_piece, Game.promote_pawn,
                           Game.opponents_move, Game.pending_join, Game.invitation]
 
 
@@ -46,30 +46,14 @@ async def get_my_nickname(msg: types.Message, state: FSMContext):
                     state=states_for_cancel_game)
 async def cancel_game(msg: types.Message, state: FSMContext):
     user_data = await state.get_data()
-    if user_data.get("opponent"):
-        await bot.send_message(user_data["opponent"], Messages.game_canceled,
+    if user_data.get("opponent_id"):
+        await bot.send_message(user_data["opponent_id"], Messages.game_canceled,
                                reply_markup=types.ReplyKeyboardRemove())
-        opponent_state = dp.current_state(chat=user_data["opponent"],
-                                          user=user_data["opponent"])
+        opponent_state = dp.current_state(chat=user_data["opponent_id"],
+                                          user=user_data["opponent_id"])
         await opponent_state.finish()
     await state.finish()
     await msg.reply(Messages.on_exit, reply_markup=types.ReplyKeyboardRemove())
-
-
-# @dp.message_handler(Command(CANCEL_COMMANDS, ignore_case=True),
-#                     state=[Game.pending_join, Game.invitation])
-# @dp.message_handler(Text(equals=CANCEL_COMMANDS, ignore_case=True),
-#                     state=[Game.pending_join, Game.invitation])
-# async def cancel_invitation(msg: types.Message, state: FSMContext):
-#     user_data = await state.get_data()
-#     if user_data.get("opponent"):
-#         await bot.send_message(user_data["opponent"], Messages.invitation_canceled,
-#                                reply_markup=types.ReplyKeyboardRemove())
-#         opponent_state = dp.current_state(chat=user_data["opponent"],
-#                                           user=user_data["opponent"])
-#         await opponent_state.finish()
-#     await state.finish()
-#     await msg.reply(Messages.on_exit, reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(Command(CANCEL_COMMANDS, ignore_case=True),
