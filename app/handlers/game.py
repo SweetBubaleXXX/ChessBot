@@ -300,8 +300,30 @@ async def move_piece(msg: types.Message, state: FSMContext):
     await opponent_state.set_state(Game.pick_piece)
 
 
+@dp.callback_query_handler(promote_pawn.promote_pawn_cb.filter(), state=Game.promote_pawn)
+async def promote_pawn_callback(call: types.CallbackQuery, callback_data: dict, state: FSMContext):
+    user_data = await state.get_data()
+    field = Field(user_data["field"])
+    picked = Coordinate(user_data["picked"])
+    if user_data["white"]:
+        field.replace(picked, callback_data["piece"].upper())
+    else:
+        field.replace(picked, callback_data["piece"])
+    opponent_state = dp.current_state(chat=user_data["opponent_id"],
+                                      user=user_data["opponent_id"])
+    await opponent_state.update_data(field=field.field)
+    await send_field(user_data["opponent_id"], field.field,
+                     not (user_data["is_white"]))
+    await bot.send_message(user_data["opponent_id"], Messages.pick_piece)
+    await state.update_data(picked=False, field=field.field)
+    await send_field(call.message.from_user.id, field,
+                     user_data["is_white"])
+    await Game.move_piece.set()
+    await call.answer()
+
+
 @dp.callback_query_handler(text="cancel_picked", state=Game.move_piece)
-async def cancel_picked(call: types.CallbackQuery, state: FSMContext):
+async def cancel_picked_callback(call: types.CallbackQuery, state: FSMContext):
     await state.update_data(picked=False)
     await Game.pick_piece.set()
     await call.message.answer(Messages.pick_piece)

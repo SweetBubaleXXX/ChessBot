@@ -42,12 +42,6 @@ class Coordinate:
         else:
             raise StopIteration
 
-    def as_tuple(self) -> tuple:
-        return (self.x, self.y)
-
-    def as_list(self) -> list:
-        return [self.x, self.y]
-
 
 class CoordinateError(Exception):
     def __init__(self, answer: Optional[str] = None,

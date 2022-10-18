@@ -21,9 +21,12 @@ class Field():
     def at(self, coordinate: Coordinate) -> str:
         return self.field[coordinate.x][coordinate.y]
 
+    def replace(self,coordinate: Coordinate, piece: str):
+        self.field[coordinate.x][coordinate.y] = piece
+
     def move(self, from_coordinate: Coordinate, to_coordinate: Coordinate):
-        self.field[to_coordinate.x][to_coordinate.y] = self.field[from_coordinate.x][from_coordinate.y]
-        self.field[from_coordinate.x][from_coordinate.y] = "-"
+        self.replace(to_coordinate, self.at(from_coordinate))
+        self.replace(from_coordinate, "-")
 
     def find_king(self, is_white: bool) -> Optional[Coordinate]:
         for x, row in enumerate(self.field):
