@@ -264,35 +264,6 @@ async def move_piece(msg: types.Message, state: FSMContext):
         king_coordinate = field.find_king(user_data["is_white"])
         king_coordinate and king_pos.append(tuple(king_coordinate))
 
-    # await send_field(msg.from_user.id, field.field,
-    #                  user_data["is_white"], check=king_pos)
-    # await msg.answer(Messages.moved.format(picked=str(picked), move=str(move)))
-    # if mate:
-    #     await msg.answer(Messages.mate)
-    #     await state.finish()
-    #     db.increase_wins(msg.from_id)
-    # else:
-    #     await msg.answer(Messages.pending_move)
-    #     await Game.opponents_move.set()
-
-    # opponent_state = dp.current_state(chat=user_data["opponent_id"],
-    #                                   user=user_data["opponent_id"])
-    # await opponent_state.update_data(field=field.field)
-    # await send_field(user_data["opponent_id"], field.field,
-    #                  not (user_data["is_white"]), check=king_pos)
-    # await bot.send_message(user_data["opponent_id"],
-    #                        Messages.moved.format(picked=str(picked), move=str(move)))
-    # if mate:
-    #     await bot.send_message(user_data["opponent_id"], Messages.mate)
-    #     await opponent_state.finish()
-    #     return db.increase_losses(user_data["opponent_id"])
-    # elif check:
-    #     await bot.send_message(user_data["opponent_id"], Messages.check)
-    # await bot.send_message(user_data["opponent_id"], Messages.pick_piece)
-    # await opponent_state.set_state(Game.pick_piece)
-
-
-
     await send_field(msg.from_user.id, field.field,
                      user_data["is_white"], check=king_pos)
     await msg.answer(Messages.moved.format(picked=str(picked), move=str(move)))
@@ -319,7 +290,6 @@ async def move_piece(msg: types.Message, state: FSMContext):
     await opponent_state.set_state(Game.pick_piece)
 
 
-
 @dp.callback_query_handler(promote_pawn.promote_pawn_cb.filter(), state=Game.promote_pawn)
 async def promote_pawn_callback(call: types.CallbackQuery, callback_data: dict, state: FSMContext):
     user_data = await state.get_data()
@@ -342,14 +312,6 @@ async def promote_pawn_callback(call: types.CallbackQuery, callback_data: dict, 
     await send_field(call.message.from_user.id, field.field,
                      user_data["is_white"], check=king_pos)
     await call.message.answer(Messages.moved.format(picked=str(picked), move=str(picked)))
-    if mate:
-        await call.message.answer(Messages.mate)
-        await state.finish()
-        db.increase_wins(call.message.from_id)
-    else:
-        await call.message.answer(Messages.pending_move)
-        await Game.opponents_move.set()
-
     opponent_state = dp.current_state(chat=user_data["opponent_id"],
                                       user=user_data["opponent_id"])
     await opponent_state.update_data(field=field.field)
@@ -358,14 +320,19 @@ async def promote_pawn_callback(call: types.CallbackQuery, callback_data: dict, 
     await bot.send_message(user_data["opponent_id"],
                            Messages.moved.format(picked=str(picked), move=str(picked)))
     if mate:
+        await call.message.answer(Messages.mate)
         await bot.send_message(user_data["opponent_id"], Messages.mate)
+        await state.finish()
         await opponent_state.finish()
+        db.increase_wins(call.message.from_id)
         return db.increase_losses(user_data["opponent_id"])
     elif check:
         await bot.send_message(user_data["opponent_id"], Messages.check)
+    else:
+        await call.message.answer(Messages.pending_move)
+        await Game.opponents_move.set()
     await bot.send_message(user_data["opponent_id"], Messages.pick_piece)
     await opponent_state.set_state(Game.pick_piece)
-    await call.answer()
 
 
 @dp.callback_query_handler(text="cancel_picked", state=Game.move_piece)
