@@ -1,7 +1,39 @@
 {
   "request": {
     "/pick": {
-      "picked": "a2",
+      "picked": "a2"
+    },
+    "/move": {
+      "moveTo": "a3"
+    },
+    "/promote": {
+      "piece": "Q"
+    },
+    "/beated": ""
+  },
+  "response": {
+    "/pick": {
+      "wcim": "a3 g3",
+      "wcib": "b3 a1"
+    },
+    "/move": {
+      "isCheck": "fromWhite/fromBlack/Both/None",
+      "isMate": "fromWhite/fromBlack/Both/None",
+      "field": [
+        ["R", "H", "B", "Q", "K", "B", "H", "R"],
+        ["P", "P", "P", "P", "P", "P", "P", "P"],
+        ["-", "-", "-", "-", "-", "-", "-", "-"],
+        ["-", "-", "-", "-", "-", "-", "-", "-"],
+        ["-", "-", "-", "-", "-", "-", "-", "-"],
+        ["-", "-", "-", "-", "-", "-", "-", "-"],
+        ["p", "p", "p", "p", "p", "p", "p", "p"],
+        ["r", "h", "b", "q", "k", "b", "h", "r"]
+      ],
+      "promoting": false
+    },
+    "/promote": {
+      "isCheck": "fromWhite/fromBlack/Both/None",
+      "isMate": "fromWhite/fromBlack/Both/None",
       "field": [
         ["R", "H", "B", "Q", "K", "B", "H", "R"],
         ["P", "P", "P", "P", "P", "P", "P", "P"],
@@ -13,11 +45,5 @@
         ["r", "h", "b", "q", "k", "b", "h", "r"]
       ]
     }
-  },
-  "response": {
-    "canMoveTo": "a3 a4 a5",
-    "canBeat": "b3",
-    "Checks": "b4",
-    "Mates": "b5"
   }
 }

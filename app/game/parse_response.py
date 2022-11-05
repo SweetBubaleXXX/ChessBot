@@ -1,7 +1,7 @@
 from .coordinate import Coordinate
 
 
-def parse_response(str_value: str) -> list:
+def parse_coordinate_response(str_value: str) -> list:
     out_arr = []
     if not str_value:
         return out_arr
