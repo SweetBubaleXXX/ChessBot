@@ -52,7 +52,7 @@ async def random_game_mode(msg: types.Message, state: FSMContext):
     await send_field(msg.from_user.id, START_FIELD, is_white)
     await bot.send_message(rand_user_id,
                            Messages.opponent_found.format(username=my_username))
-    await send_field(rand_user_id, START_FIELD, not (is_white))
+    await send_field(rand_user_id, START_FIELD, not is_white)
     if is_white:
         await bot.send_message(rand_user_id, Messages.pending_move)
         await opponent_state.set_state(Game.opponents_move)
@@ -178,8 +178,8 @@ async def decline_invitation(msg: types.Message, state: FSMContext):
 async def pick_piece(msg: types.Message, state: FSMContext):
     user_data = await state.get_data()
 
-    # if user_data.get("picked"):
-    #     return
+    if user_data.get("picked"):
+        return
 
     picked = Coordinate(msg.text)
     field = Field(user_data["field"])
@@ -188,15 +188,10 @@ async def pick_piece(msg: types.Message, state: FSMContext):
     else:
         raise CoordinateError(Messages.pick_piece)
 
-    try:
-        response = await logic_API.pick(user_data["picked"])
-    except Exception as e:
-        logging.error(f"Error in logic API - {e}")
-        await msg.answer("Server error")
-        raise
+    response = await logic_API.pick(user_data["picked"])
     if not response:
-        logging.error("No response from logic API server")
-    logging.info(f"Response from logic API server:\n{response}")
+        return await msg.answer("Server error")
+    logging.debug(f"Response from logic API server:\n{response}")
 
     can_move = parse_coordinate_response(response.get("wcim"))
     can_beat = parse_coordinate_response(response.get("wcib"))
@@ -204,12 +199,11 @@ async def pick_piece(msg: types.Message, state: FSMContext):
     if not any((can_move, can_beat)):
         raise CoordinateError(message=Messages.no_moves)
     await state.update_data(picked=user_data["picked"],
-                            can_move=can_move,
-                            can_beat=can_beat)
+                            can_move=can_move+can_beat)
 
-    logging.info(f"{can_move=}\n{can_beat=}\n")
+    logging.debug(f"{can_move=}\n{can_beat=}\n")
 
-    if hasattr(picked, "next"):
+    if picked.next:
         await Game.move_piece.set()
         msg.text = str(picked.next)
         return await move_piece(msg, state)
@@ -228,8 +222,8 @@ async def pick_piece(msg: types.Message, state: FSMContext):
 async def move_piece(msg: types.Message, state: FSMContext):
     user_data = await state.get_data()
 
-    # if not user_data.get("picked"):
-    #     return
+    if not user_data.get("picked"):
+        return
 
     try:
         move = Coordinate(msg.text)
@@ -239,15 +233,15 @@ async def move_piece(msg: types.Message, state: FSMContext):
 
     field = Field(user_data["field"])
 
-    if (bot_config.GOD_MODE or
-        any(tuple(move) in line for line in [user_data["can_move"],
-                                             user_data["can_beat"]])):
+    if (bot_config.GOD_MODE or tuple(move) in user_data["can_move"]):
         response = await logic_API.move(str(move))
+        if not response:
+            return await msg.answer("Server error")
         if response.get("promote"):
             await msg.answer(Messages.promote_pawn, reply_markup=promote_pawn.keyboard)
             await state.update_data(picked=str(move))
             return await Game.promote_pawn.set()
-        field.field = response.get("field")
+        field.field = response["field"]
     elif field.is_own_piece(move, user_data["is_white"]):
         await state.update_data(picked=False)
         msg.text = str(move)
@@ -283,9 +277,8 @@ async def move_piece(msg: types.Message, state: FSMContext):
         return db.increase_losses(user_data["opponent_id"])
     elif check:
         await bot.send_message(user_data["opponent_id"], Messages.check)
-    else:
-        await msg.answer(Messages.pending_move)
-        await Game.opponents_move.set()
+    await msg.answer(Messages.pending_move)
+    await Game.opponents_move.set()
     await bot.send_message(user_data["opponent_id"], Messages.pick_piece)
     await opponent_state.set_state(Game.pick_piece)
 

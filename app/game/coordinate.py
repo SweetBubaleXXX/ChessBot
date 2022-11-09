@@ -13,6 +13,7 @@ class Coordinate:
                 y_str, x_str = trimmed
                 self.x = int(x_str) - 1
                 self.y = ord(y_str) - 97
+                self.next = None
                 if len(cut_str) >= 4:
                     self.next = Coordinate(cut_str[2:4])
             elif isinstance(coordinate, tuple):
