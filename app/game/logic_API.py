@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Tuple, Type, Optional
+from typing import List, Tuple, Type
 from urllib.parse import urljoin
 
 import aiohttp

@@ -37,7 +37,12 @@ async def random_game_mode(msg: types.Message, state: FSMContext):
     await redis.srem("pending_users", rand_user_id)
 
     opponent = db.get_user_by_id(int(rand_user_id))
-    player_name = db.get_user_by_id(msg.from_user.id).username
+    player = db.get_user_by_id(msg.from_user.id)
+    if opponent is None or player is None:
+        await redis.sadd("pending_users", msg.from_user.id)
+        await msg.answer(Messages.searching_opponent,
+                         reply_markup=types.ReplyKeyboardRemove())
+        return await Game.searching_opponent.set()
     opponent_state = dp.current_state(chat=int(rand_user_id),
                                       user=int(rand_user_id))
     is_white = bool(randint(0, 1))
@@ -51,7 +56,7 @@ async def random_game_mode(msg: types.Message, state: FSMContext):
     await msg.answer(Messages.opponent_found.format(username=opponent.username))
     await send_field(msg.from_user.id, START_FIELD, is_white)
     await bot.send_message(rand_user_id,
-                           Messages.opponent_found.format(username=player_name))
+                           Messages.opponent_found.format(username=player.username))
     await send_field(rand_user_id, START_FIELD, not is_white)
     if is_white:
         await bot.send_message(rand_user_id, Messages.pending_move)
