@@ -6,6 +6,7 @@ from aiogram import Dispatcher, executor
 from app.bot import dp
 from app.handlers import *
 from app import bot_config
+from app.db import db
 
 _log_format = f"%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d):\n\t%(message)s\n"
 
@@ -28,6 +29,8 @@ loglevel = {
 async def shutdown(dispatcher: Dispatcher):
     await dispatcher.storage.close()
     await dispatcher.storage.wait_closed()
+
+    await db.engine.dispose()
 
 
 if __name__ == "__main__":

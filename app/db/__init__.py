@@ -1,3 +1,5 @@
+import asyncio
+
 from . import db
 
-db.create_table_users()
+asyncio.run(db.create_table_users)

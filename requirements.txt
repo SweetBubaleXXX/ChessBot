@@ -3,3 +3,5 @@ aiohttp==3.8
 aioredis==2.0
 Pillow==9.2
 pydantic==1.10
+sqlalchemy==1.4.43
+aiosqlite

@@ -1,60 +1,39 @@
-import sqlite3
-from os import path
 from typing import Union
 
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+from .models import Player, Settings, Base
 from ..bot_config import DB_PATH
-from .user_model import UserModel
 
-PATH = path.dirname(__file__)
-SCHEMAS = {
-    "create_table_users": "create_table_users.sql",
-    "insert_user": "insert_user.sql",
-    "update_username": "update_username.sql",
-    "get_user_by_id": "get_user_by_id.sql",
-    "get_user_by_username": "get_user_by_username.sql",
-    "increase_wins": "increase_wins.sql",
-    "increase_losses": "increase_losses.sql"
-}
+engine = create_async_engine(DB_PATH)
 
-for key, filename in SCHEMAS.items():
-    with open(path.join(PATH, filename), "r") as f:
-        SCHEMAS[key] = f.read()
-
-conn = sqlite3.connect(DB_PATH)
-cursor = conn.cursor()
+async_session = sessionmaker(
+    engine, expire_on_commit=False, class_=AsyncSession
+)
 
 
-def create_table_users():
-    cursor.executescript(SCHEMAS["create_table_users"])
+async def create_table_users():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 
-def insert_user(id: int, username: str):
-    cursor.execute(SCHEMAS["insert_user"], (id, username))
-    conn.commit()
+async def insert_user(id: int, username: str):
+    async with async_session() as session:
+        async with session.begin():
+            session.add(Player(id=id, username=username))
 
 
-def update_username(id: int, username: str):
-    cursor.execute(SCHEMAS["update_username"], (username, id))
-    conn.commit()
+def update_username(id: int, username: str): ...
 
 
-def get_user_by_id(id: int) -> Union[UserModel, None]:
-    cursor.execute(SCHEMAS["get_user_by_id"], (id,))
-    db_output = cursor.fetchone()
-    return db_output and UserModel(*db_output)
+def get_user_by_id(id: int) -> Union[Player, None]: ...
 
 
-def get_user_by_username(username: str) -> Union[UserModel, None]:
-    cursor.execute(SCHEMAS["get_user_by_username"], (username,))
-    db_output = cursor.fetchone()
-    return db_output and UserModel(*db_output)
+def get_user_by_username(username: str) -> Union[Player, None]: ...
 
 
-def increase_wins(id: int):
-    cursor.execute(SCHEMAS["increase_wins"], (id,))
-    conn.commit()
+def increase_wins(id: int): ...
 
 
-def increase_losses(id: int):
-    cursor.execute(SCHEMAS["increase_losses"], (id,))
-    conn.commit()
+def increase_losses(id: int): ...
