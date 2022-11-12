@@ -17,7 +17,7 @@ class Render:
             self.size = config.SIZES[0]
         self.theme = theme if theme in config.THEMES else config.THEMES[0]
 
-        self.board_sizes = config.BOARD_SIZES[str(self.size)]
+        self.board_sizes = config.BOARD_SIZES[self.size]
         self.board = Image.open(path.join(PATH, "src", self.theme, str(
             self.size), config.BOARDS["board"])).convert("RGBA")
         self.board_black = Image.open(path.join(PATH, "src", self.theme, str(

@@ -1,7 +1,7 @@
 SIZES = [1100]
 THEMES = ["default"]
 BOARD_SIZES = {
-    "1100": (128, 38)  # Cell size, border size
+    1100: (128, 38)  # Cell size, border size
 }
 BOARDS = {
     "board": "board.png",
